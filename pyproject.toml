@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pep723widget"
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 classifiers = [
