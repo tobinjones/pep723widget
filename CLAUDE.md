@@ -9,6 +9,7 @@ This is a JupyterLab extension called `pep723widget` that enables editing of PEP
 ## Development Commands
 
 ### Build Commands
+
 ```bash
 # Development build (with source maps)
 jlpm build
@@ -24,6 +25,7 @@ jlpm build:labextension
 ```
 
 ### Development Workflow
+
 ```bash
 # Install in development mode
 pip install -e ".[test]"
@@ -36,6 +38,7 @@ jupyter lab         # Run JupyterLab
 ```
 
 ### Testing
+
 ```bash
 # Frontend tests (Jest)
 jlpm test
@@ -48,6 +51,7 @@ cd ui-tests && jlpm test
 ```
 
 ### Linting and Code Quality
+
 ```bash
 # Run all linting
 jlpm lint
@@ -62,6 +66,7 @@ jlpm lint:check
 ```
 
 ### Cleanup
+
 ```bash
 jlpm clean          # Clean build artifacts
 jlpm clean:all      # Clean everything including caches
@@ -70,17 +75,20 @@ jlpm clean:all      # Clean everything including caches
 ## Architecture
 
 ### Frontend Extension
+
 - **Entry point**: `src/index.ts` - JupyterLab plugin definition
 - **API client**: `src/handler.ts` - Communicates with server extension
 - **Plugin ID**: `pep723widget:plugin`
 - Uses JupyterLab 4.x APIs (@jupyterlab/application, @jupyterlab/settingregistry)
 
 ### Server Extension
+
 - **Entry point**: `pep723widget/handlers.py` - Tornado request handlers
 - **API endpoint**: `/pep723widget/get-example` (currently example endpoint)
 - Integrates with Jupyter Server using `APIHandler`
 
 ### Configuration
+
 - **Settings schema**: `schema/plugin.json`
 - **Server config**: `jupyter-config/server-config/pep723widget.json`
 - **Extension output**: `pep723widget/labextension/` (built frontend assets)
@@ -88,17 +96,20 @@ jlpm clean:all      # Clean everything including caches
 ## Code Style
 
 ### TypeScript
+
 - Uses ESLint with TypeScript preset
 - Prettier formatting with single quotes
 - Interface naming convention: `I[A-Z]` (e.g., `IMyInterface`)
 - Arrow functions preferred over function expressions
 
 ### Python
+
 - Server extension follows Jupyter Server patterns
 - Uses `@tornado.web.authenticated` decorator for API endpoints
 - Test coverage with pytest-cov
 
 ## Key Files
+
 - `package.json` - Frontend dependencies and scripts
 - `pyproject.toml` - Python package configuration and build system
 - `src/index.ts` - Main plugin registration
@@ -106,6 +117,7 @@ jlpm clean:all      # Clean everything including caches
 - `schema/plugin.json` - Settings schema definition
 
 ## Extension Installation Flow
+
 1. Python package installs server extension
 2. Frontend assets built to `pep723widget/labextension/`
 3. JupyterLab discovers extension via `install.json`

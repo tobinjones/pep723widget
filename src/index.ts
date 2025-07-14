@@ -12,10 +12,14 @@ import { requestAPI } from './handler';
  */
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'pep723widget:plugin',
-  description: 'A JupyterLab extension to edit pep723 inline script metadata in notebooks.',
+  description:
+    'A JupyterLab extension to edit pep723 inline script metadata in notebooks.',
   autoStart: true,
   optional: [ISettingRegistry],
-  activate: (app: JupyterFrontEnd, settingRegistry: ISettingRegistry | null) => {
+  activate: (
+    app: JupyterFrontEnd,
+    settingRegistry: ISettingRegistry | null
+  ) => {
     console.log('JupyterLab extension pep723widget is activated!');
 
     if (settingRegistry) {
