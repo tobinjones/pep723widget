@@ -74,49 +74,116 @@ jlpm clean          # Clean build artifacts
 jlpm clean:all      # Clean everything including caches
 ```
 
+### Git Workflow
+
+Feature Development
+
+1. Create feature branch: git checkout -b feature/feature-name
+2. Implement changes: Follow development workflow above
+3. Pre-commit verification:
+   jlpm lint # Auto-fix formatting
+   jlpm build # Verify build
+   pytest -vv -r ap --cov pep723widget # Test server
+4. Commit:
+   git commit -m "Commit message"
+5. Push and create PR: git push -u origin feature/feature-name
+6. Use GitHub CLI: gh pr create --title "Title" --body "Description"
+
 ## Architecture
 
 ### Frontend Extension
 
-- **Entry point**: `src/index.ts` - JupyterLab plugin definition
-- **API client**: `src/handler.ts` - Communicates with server extension
-- **Plugin ID**: `pep723widget:plugin`
-- Uses JupyterLab 4.x APIs (@jupyterlab/application, @jupyterlab/settingregistry)
+- Entry point: src/index.ts - JupyterLab plugin definition and DocumentWidget
+- Plugin ID: pep723widget:plugin
+- Document factory: Creates PEP 723 viewer accessible via "Open With" menu
+- Dependencies: @jupyterlab/application, @jupyterlab/settingregistry, @jupyterlab/docregistry, @lumino/widgets
 
 ### Server Extension
 
-- **Entry point**: `pep723widget/handlers.py` - Tornado request handlers
-- **API endpoint**: `/pep723widget/get-example` (currently example endpoint)
-- Integrates with Jupyter Server using `APIHandler`
+- Entry point: `pep723widget/handlers.py` - Tornado request handlers
+- API endpoints:
+  - /pep723widget/add-dependency - Add dependencies using uv add --script
+- Integration: Jupyter Server using APIHandler with @tornado.web.authenticated
+- Dependencies: uv package for reliable executable location
 
 ### Configuration
 
-- **Settings schema**: `schema/plugin.json`
-- **Server config**: `jupyter-config/server-config/pep723widget.json`
-- **Extension output**: `pep723widget/labextension/` (built frontend assets)
+- Settings schema: `schema/plugin.json`
+- Server config: `jupyter-config/server-config/pep723widget.json`
+- Extension output: `pep723widget/labextension/` (built frontend assets)
+
+## PEP 723 Technical Specifications
+
+Canonical Regex Pattern
+
+### Python regex (multiline mode)
+
+(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$
+
+Validation Requirements
+
+- Position: PEP 723 metadata must be in first cell only
+- Cell type: First cell must be a code cell
+- Content purity: First cell must contain only PEP 723 metadata and whitespace
+- Format:
+  - Start: # /// script (or other valid type)
+  - Content: # (empty) or # content (with content)
+  - End: # ///
+
+### Example Valid Metadata
+
+# /// script
+# requires-python = "~=3.12.0"
+# dependencies = [
+# "rich",
+# "requests>=2.25.0",
+# ]
+# ///
+
+## Security and Dependencies
+
+### Critical Dependencies
+
+- uv: Python package manager for dependency management
+  - Usage: uv.find_uv_bin() for reliable executable location
+  - Purpose: Execute uv add --script commands securely
+
+### Security Patterns
+
+- Temporary directories: Use the tempfile library to manage temporary files
+- Subprocess execution: Controlled execution with proper error handling
+- Authentication: All API endpoints use @tornado.web.authenticated
+
+### Secure subprocess execution
+
+uv_bin = uv.find_uv_bin() # Use uv.find_uv_bin(), not PATH lookup
+result = subprocess.run([uv_bin, "add", "--script", temp_py_file, dependency],
+capture_output=True, text=True, cwd=temp_dir)
+
 
 ## Code Style
 
 ### TypeScript
-
 - Uses ESLint with TypeScript preset
 - Prettier formatting with single quotes
 - Interface naming convention: `I[A-Z]` (e.g., `IMyInterface`)
 - Arrow functions preferred over function expressions
+- Error handling: Use error instanceof Error for proper type checking
 
 ### Python
 
 - Server extension follows Jupyter Server patterns
-- Uses `@tornado.web.authenticated` decorator for API endpoints
+- Uses @tornado.web.authenticated decorator for API endpoints
 - Test coverage with pytest-cov
 
 ## Key Files
 
 - `package.json` - Frontend dependencies and scripts
 - `pyproject.toml` - Python package configuration and build system
-- `src/index.ts` - Main plugin registration
-- `pep723widget/handlers.py` - Server-side request handlers
+- `src/index.ts` - Main plugin registration and DocumentWidget implementation
+- `pep723widget/handlers.py` - Server-side request handlers including dependency management
 - `schema/plugin.json` - Settings schema definition
+- `style/base.css` - Component styling with JupyterLab theme integration
 
 ## Extension Installation Flow
 
