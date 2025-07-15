@@ -147,7 +147,7 @@ class Pep723NotebookWidget extends Widget {
     // Use the canonical PEP 723 regex pattern
     // (?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$
     const pep723Regex = /^# \/\/\/ [a-zA-Z0-9-]+$\s(^#( .*)?$\s)+^# \/\/\/$/m;
-    
+
     if (!pep723Regex.test(source)) {
       return {
         valid: false,
@@ -163,12 +163,15 @@ class Pep723NotebookWidget extends Widget {
         continue; // Allow empty lines
       }
       // Valid PEP 723 lines: # /// type, # content, # ///
-      if (!trimmed.match(/^# \/\/\/ [a-zA-Z0-9-]+$/) && 
-          !trimmed.match(/^#( .*)?$/) && 
-          !trimmed.match(/^# \/\/\/$/)) {
+      if (
+        !trimmed.match(/^# \/\/\/ [a-zA-Z0-9-]+$/) &&
+        !trimmed.match(/^#( .*)?$/) &&
+        !trimmed.match(/^# \/\/\/$/)
+      ) {
         return {
           valid: false,
-          error: 'First cell must contain only PEP 723 metadata and whitespace. Found non-metadata content.'
+          error:
+            'First cell must contain only PEP 723 metadata and whitespace. Found non-metadata content.'
         };
       }
     }
