@@ -53,7 +53,7 @@ cd ui-tests && jlpm test
 ### Linting and Code Quality
 
 ```bash
-# Run all linting
+# Run all linting (REQUIRED before committing)
 jlpm lint
 
 # Individual linting tools
@@ -64,6 +64,8 @@ jlpm stylelint      # CSS linting
 # Check only (no fixes)
 jlpm lint:check
 ```
+
+**IMPORTANT**: Always run `jlpm lint` before committing code. The CI uses `jlpm lint:check` which will fail if code is not properly formatted. Running `jlpm lint` auto-fixes formatting issues that `jlpm lint:check` only detects.
 
 ### Cleanup
 
