@@ -99,6 +99,12 @@ class Pep723NotebookWidget extends Widget {
     formSection.className = 'dependency-form';
     this._createDependencyForm(formSection);
     container.appendChild(formSection);
+
+    // Dependency tree display
+    const treeSection = document.createElement('div');
+    treeSection.className = 'tree-section';
+    this._createTreeDisplay(treeSection);
+    container.appendChild(treeSection);
   }
 
   private _createDependencyForm(container: HTMLElement): void {
@@ -206,6 +212,25 @@ class Pep723NotebookWidget extends Widget {
     container.appendChild(metadataDiv);
   }
 
+  private _createTreeDisplay(container: HTMLElement): void {
+    const treeTitle = document.createElement('h3');
+    treeTitle.textContent = 'Dependency Tree';
+    container.appendChild(treeTitle);
+
+    const treeContent = document.createElement('div');
+    treeContent.className = 'tree-content';
+    treeContent.innerHTML =
+      '<p>Add a dependency to see the dependency tree.</p>';
+    container.appendChild(treeContent);
+  }
+
+  private _updateTreeDisplay(treeOutput?: string): void {
+    const treeContent = this.node.querySelector('.tree-content') as HTMLElement;
+    if (treeContent && treeOutput) {
+      treeContent.innerHTML = `<pre>${treeOutput}</pre>`;
+    }
+  }
+
   private async _addDependency(): Promise<void> {
     const input = this.node.querySelector(
       '#dependency-input'
@@ -231,22 +256,32 @@ class Pep723NotebookWidget extends Widget {
       const firstCell = this._context.model.cells.get(0);
       const scriptMetadata = firstCell.sharedModel.getSource();
 
+      // Check for existing lockfile in notebook metadata
+      const lockfileContent = this._context.model.getMetadata('uv.lock') as string | undefined;
+
       // Call backend API
       const response = await requestAPI<any>('add-dependency', {
         method: 'POST',
         body: JSON.stringify({
           script_metadata: scriptMetadata,
-          dependency: dependency
+          dependency: dependency,
+          lockfile_content: lockfileContent || null
         })
       });
 
       // Update cell content with new metadata
       firstCell.sharedModel.setSource(response.updated_metadata);
 
+      // Update lockfile in notebook metadata if it already existed
+      if (lockfileContent !== undefined && response.lockfile_content) {
+        this._context.model.setMetadata('uv.lock', response.lockfile_content);
+      }
+
       // Update UI
       this._updateMetadataContent(
         this.node.querySelector('.metadata-section')!
       );
+      this._updateTreeDisplay(response.tree_output);
       input.value = '';
       this._showStatus(status, `Successfully added "${dependency}"`, 'success');
     } catch (error) {
