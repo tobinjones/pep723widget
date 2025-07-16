@@ -25,6 +25,7 @@ import { requestAPI } from './handler';
  */
 class Pep723NotebookWidget extends Widget {
   private _context: DocumentRegistry.IContext<INotebookModel>;
+  private _latestLockfileContent: string | null = null;
 
   constructor(context: DocumentRegistry.IContext<INotebookModel>) {
     super();
@@ -80,14 +81,6 @@ class Pep723NotebookWidget extends Widget {
   }
 
   private _createMainInterface(container: HTMLElement): void {
-    const notebookInfo = document.createElement('div');
-    notebookInfo.className = 'notebook-info';
-    notebookInfo.innerHTML = `
-      <p><strong>Notebook:</strong> ${this._context.path}</p>
-      <p><strong>Status:</strong> Ready for dependency management</p>
-    `;
-    container.appendChild(notebookInfo);
-
     // Current metadata display
     const metadataSection = document.createElement('div');
     metadataSection.className = 'metadata-section';
@@ -99,6 +92,15 @@ class Pep723NotebookWidget extends Widget {
     formSection.className = 'dependency-form';
     this._createDependencyForm(formSection);
     container.appendChild(formSection);
+
+    // Dependency tree display
+    const treeSection = document.createElement('div');
+    treeSection.className = 'tree-section';
+    this._createTreeDisplay(treeSection);
+    container.appendChild(treeSection);
+
+    // Load initial tree
+    this._loadInitialTree();
   }
 
   private _createDependencyForm(container: HTMLElement): void {
@@ -114,6 +116,11 @@ class Pep723NotebookWidget extends Widget {
     input.id = 'dependency-input';
     input.placeholder = 'e.g., requests, pandas>=2.0.0, numpy[dev]';
     input.className = 'dependency-input';
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        this._addDependency();
+      }
+    });
 
     const button = document.createElement('button');
     button.textContent = 'Add Dependency';
@@ -206,6 +213,135 @@ class Pep723NotebookWidget extends Widget {
     container.appendChild(metadataDiv);
   }
 
+  private _createTreeDisplay(container: HTMLElement): void {
+    const treeTitle = document.createElement('h3');
+    treeTitle.className = 'tree-title';
+    this._updateTreeTitle(treeTitle);
+    container.appendChild(treeTitle);
+
+    const treeContent = document.createElement('div');
+    treeContent.className = 'tree-content';
+    treeContent.innerHTML = '<p>Loading dependency tree...</p>';
+    container.appendChild(treeContent);
+
+    // Lock/Unlock button
+    const lockButton = document.createElement('button');
+    lockButton.className = 'lock-btn';
+    lockButton.onclick = () => this._toggleLock();
+    this._updateLockButton(lockButton);
+    container.appendChild(lockButton);
+  }
+
+  private _updateTreeTitle(titleElement?: HTMLElement): void {
+    const title =
+      titleElement || (this.node.querySelector('.tree-title') as HTMLElement);
+    if (!title) {
+      return;
+    }
+
+    const lockfileContent = this._context.model.getMetadata('uv.lock') as
+      | string
+      | undefined;
+    const isLocked = lockfileContent !== undefined;
+
+    title.textContent = isLocked ? '🔒 Dependency Tree' : '🔓 Dependency Tree';
+
+    // Update tree content styling based on lock status
+    const treeContent = this.node.querySelector('.tree-content') as HTMLElement;
+    if (treeContent) {
+      if (isLocked) {
+        treeContent.classList.remove('unlocked');
+      } else {
+        treeContent.classList.add('unlocked');
+      }
+    }
+  }
+
+  private _updateTreeDisplay(treeOutput?: string): void {
+    const treeContent = this.node.querySelector('.tree-content') as HTMLElement;
+    if (treeContent && treeOutput) {
+      treeContent.innerHTML = `<pre>${treeOutput}</pre>`;
+    }
+    // Update title to reflect current lock status
+    this._updateTreeTitle();
+    // Update lock button text
+    this._updateLockButton();
+  }
+
+  private async _loadInitialTree(): Promise<void> {
+    try {
+      // Get current script metadata from first cell
+      const firstCell = this._context.model.cells.get(0);
+      const scriptMetadata = firstCell.sharedModel.getSource();
+
+      // Check for existing lockfile in notebook metadata
+      const lockfileContent = this._context.model.getMetadata('uv.lock') as
+        | string
+        | undefined;
+
+      // Call get-tree API
+      const response = await requestAPI<any>('get-tree', {
+        method: 'POST',
+        body: JSON.stringify({
+          script_metadata: scriptMetadata,
+          lockfile_content: lockfileContent || null
+        })
+      });
+
+      // Store latest lockfile content
+      this._latestLockfileContent = response.lockfile_content;
+
+      // Update tree display
+      this._updateTreeDisplay(response.tree_output);
+    } catch (error) {
+      console.error('Error loading initial tree:', error);
+      const treeContent = this.node.querySelector(
+        '.tree-content'
+      ) as HTMLElement;
+      if (treeContent) {
+        treeContent.innerHTML = '<p>Failed to load dependency tree.</p>';
+      }
+      this._updateTreeTitle();
+    }
+  }
+
+  private _updateLockButton(buttonElement?: HTMLElement): void {
+    const button =
+      buttonElement || (this.node.querySelector('.lock-btn') as HTMLElement);
+    if (!button) {
+      return;
+    }
+
+    const lockfileContent = this._context.model.getMetadata('uv.lock') as
+      | string
+      | undefined;
+    const isLocked = lockfileContent !== undefined;
+
+    button.textContent = isLocked ? 'Unlock' : 'Lock';
+    button.className = isLocked ? 'lock-btn unlock' : 'lock-btn lock';
+  }
+
+  private _toggleLock(): void {
+    const lockfileContent = this._context.model.getMetadata('uv.lock') as
+      | string
+      | undefined;
+    const isLocked = lockfileContent !== undefined;
+
+    if (isLocked) {
+      // Unlock: delete the metadata key
+      this._context.model.deleteMetadata('uv.lock');
+    } else {
+      // Lock: save the latest lockfile content to metadata
+      if (this._latestLockfileContent) {
+        this._context.model.setMetadata('uv.lock', this._latestLockfileContent);
+      }
+    }
+
+    // Update UI to reflect the change
+    this._updateTreeTitle();
+    this._updateLockButton();
+  }
+
   private async _addDependency(): Promise<void> {
     const input = this.node.querySelector(
       '#dependency-input'
@@ -231,22 +367,37 @@ class Pep723NotebookWidget extends Widget {
       const firstCell = this._context.model.cells.get(0);
       const scriptMetadata = firstCell.sharedModel.getSource();
 
+      // Check for existing lockfile in notebook metadata
+      const lockfileContent = this._context.model.getMetadata('uv.lock') as
+        | string
+        | undefined;
+
       // Call backend API
       const response = await requestAPI<any>('add-dependency', {
         method: 'POST',
         body: JSON.stringify({
           script_metadata: scriptMetadata,
-          dependency: dependency
+          dependency: dependency,
+          lockfile_content: lockfileContent || null
         })
       });
 
       // Update cell content with new metadata
       firstCell.sharedModel.setSource(response.updated_metadata);
 
+      // Store latest lockfile content
+      this._latestLockfileContent = response.lockfile_content;
+
+      // Update lockfile in notebook metadata if it already existed
+      if (lockfileContent !== undefined && response.lockfile_content) {
+        this._context.model.setMetadata('uv.lock', response.lockfile_content);
+      }
+
       // Update UI
       this._updateMetadataContent(
         this.node.querySelector('.metadata-section')!
       );
+      this._updateTreeDisplay(response.tree_output);
       input.value = '';
       this._showStatus(status, `Successfully added "${dependency}"`, 'success');
     } catch (error) {

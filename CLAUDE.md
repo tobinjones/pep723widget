@@ -133,11 +133,17 @@ Validation Requirements
 ### Example Valid Metadata
 
 # /// script
+
 # requires-python = "~=3.12.0"
+
 # dependencies = [
+
 # "rich",
+
 # "requests>=2.25.0",
+
 # ]
+
 # ///
 
 ## Security and Dependencies
@@ -160,10 +166,10 @@ uv_bin = uv.find_uv_bin() # Use uv.find_uv_bin(), not PATH lookup
 result = subprocess.run([uv_bin, "add", "--script", temp_py_file, dependency],
 capture_output=True, text=True, cwd=temp_dir)
 
-
 ## Code Style
 
 ### TypeScript
+
 - Uses ESLint with TypeScript preset
 - Prettier formatting with single quotes
 - Interface naming convention: `I[A-Z]` (e.g., `IMyInterface`)

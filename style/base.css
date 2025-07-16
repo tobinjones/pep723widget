@@ -5,6 +5,9 @@ PEP 723 Widget Styles
 .pep723-container {
   padding: 16px;
   font-family: var(--jp-ui-font-family);
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .pep723-error {
@@ -121,4 +124,63 @@ PEP 723 Widget Styles
   background: var(--jp-info-color3);
   color: var(--jp-info-color1);
   border: 1px solid var(--jp-info-color2);
+}
+
+.tree-section {
+  margin: 16px 0;
+}
+
+.tree-content {
+  background: var(--jp-layout-color1);
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 4px;
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: var(--jp-code-font-family);
+}
+
+.tree-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.tree-content.unlocked {
+  color: var(--jp-ui-font-color2);
+  background: var(--jp-layout-color2);
+}
+
+.tree-content.unlocked pre {
+  color: var(--jp-ui-font-color2);
+}
+
+.lock-btn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.lock-btn.lock {
+  background: var(--jp-success-color3);
+  color: var(--jp-success-color1);
+  border-color: var(--jp-success-color2);
+}
+
+.lock-btn.lock:hover {
+  background: var(--jp-success-color2);
+}
+
+.lock-btn.unlock {
+  background: var(--jp-warn-color3);
+  color: var(--jp-warn-color1);
+  border-color: var(--jp-warn-color2);
+}
+
+.lock-btn.unlock:hover {
+  background: var(--jp-warn-color2);
 }
