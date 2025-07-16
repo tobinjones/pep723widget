@@ -88,9 +88,16 @@ class GetTreeHandler(APIHandler):
                 
                 tree_output = tree_result.stdout if tree_result.returncode == 0 else "Tree generation failed"
                 
-                # Step 4: Return results
+                # Step 4: Read lockfile
+                updated_lockfile = None
+                if os.path.exists(temp_lock_file):
+                    with open(temp_lock_file, 'r') as f:
+                        updated_lockfile = f.read()
+                
+                # Step 5: Return results
                 self.finish(json.dumps({
-                    "tree_output": tree_output
+                    "tree_output": tree_output,
+                    "lockfile_content": updated_lockfile
                 }))
                 
             finally:

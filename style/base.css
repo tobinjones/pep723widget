@@ -154,3 +154,33 @@ PEP 723 Widget Styles
 .tree-content.unlocked pre {
   color: var(--jp-ui-font-color2);
 }
+
+.lock-btn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.lock-btn.lock {
+  background: var(--jp-success-color3);
+  color: var(--jp-success-color1);
+  border-color: var(--jp-success-color2);
+}
+
+.lock-btn.lock:hover {
+  background: var(--jp-success-color2);
+}
+
+.lock-btn.unlock {
+  background: var(--jp-warn-color3);
+  color: var(--jp-warn-color1);
+  border-color: var(--jp-warn-color2);
+}
+
+.lock-btn.unlock:hover {
+  background: var(--jp-warn-color2);
+}

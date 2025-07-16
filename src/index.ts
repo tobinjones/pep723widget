@@ -25,6 +25,7 @@ import { requestAPI } from './handler';
  */
 class Pep723NotebookWidget extends Widget {
   private _context: DocumentRegistry.IContext<INotebookModel>;
+  private _latestLockfileContent: string | null = null;
 
   constructor(context: DocumentRegistry.IContext<INotebookModel>) {
     super();
@@ -222,6 +223,13 @@ class Pep723NotebookWidget extends Widget {
     treeContent.className = 'tree-content';
     treeContent.innerHTML = '<p>Loading dependency tree...</p>';
     container.appendChild(treeContent);
+
+    // Lock/Unlock button
+    const lockButton = document.createElement('button');
+    lockButton.className = 'lock-btn';
+    lockButton.onclick = () => this._toggleLock();
+    this._updateLockButton(lockButton);
+    container.appendChild(lockButton);
   }
 
   private _updateTreeTitle(titleElement?: HTMLElement): void {
@@ -256,6 +264,8 @@ class Pep723NotebookWidget extends Widget {
     }
     // Update title to reflect current lock status
     this._updateTreeTitle();
+    // Update lock button text
+    this._updateLockButton();
   }
 
   private async _loadInitialTree(): Promise<void> {
@@ -278,6 +288,9 @@ class Pep723NotebookWidget extends Widget {
         })
       });
 
+      // Store latest lockfile content
+      this._latestLockfileContent = response.lockfile_content;
+
       // Update tree display
       this._updateTreeDisplay(response.tree_output);
     } catch (error) {
@@ -290,6 +303,43 @@ class Pep723NotebookWidget extends Widget {
       }
       this._updateTreeTitle();
     }
+  }
+
+  private _updateLockButton(buttonElement?: HTMLElement): void {
+    const button =
+      buttonElement || (this.node.querySelector('.lock-btn') as HTMLElement);
+    if (!button) {
+      return;
+    }
+
+    const lockfileContent = this._context.model.getMetadata('uv.lock') as
+      | string
+      | undefined;
+    const isLocked = lockfileContent !== undefined;
+
+    button.textContent = isLocked ? 'Unlock' : 'Lock';
+    button.className = isLocked ? 'lock-btn unlock' : 'lock-btn lock';
+  }
+
+  private _toggleLock(): void {
+    const lockfileContent = this._context.model.getMetadata('uv.lock') as
+      | string
+      | undefined;
+    const isLocked = lockfileContent !== undefined;
+
+    if (isLocked) {
+      // Unlock: delete the metadata key
+      this._context.model.deleteMetadata('uv.lock');
+    } else {
+      // Lock: save the latest lockfile content to metadata
+      if (this._latestLockfileContent) {
+        this._context.model.setMetadata('uv.lock', this._latestLockfileContent);
+      }
+    }
+
+    // Update UI to reflect the change
+    this._updateTreeTitle();
+    this._updateLockButton();
   }
 
   private async _addDependency(): Promise<void> {
@@ -334,6 +384,9 @@ class Pep723NotebookWidget extends Widget {
 
       // Update cell content with new metadata
       firstCell.sharedModel.setSource(response.updated_metadata);
+
+      // Store latest lockfile content
+      this._latestLockfileContent = response.lockfile_content;
 
       // Update lockfile in notebook metadata if it already existed
       if (lockfileContent !== undefined && response.lockfile_content) {
