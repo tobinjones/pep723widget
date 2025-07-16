@@ -145,3 +145,12 @@ PEP 723 Widget Styles
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+
+.tree-content.unlocked {
+  color: var(--jp-ui-font-color2);
+  background: var(--jp-layout-color2);
+}
+
+.tree-content.unlocked pre {
+  color: var(--jp-ui-font-color2);
+}

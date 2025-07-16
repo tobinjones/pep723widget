@@ -97,6 +97,9 @@ class Pep723NotebookWidget extends Widget {
     treeSection.className = 'tree-section';
     this._createTreeDisplay(treeSection);
     container.appendChild(treeSection);
+
+    // Load initial tree
+    this._loadInitialTree();
   }
 
   private _createDependencyForm(container: HTMLElement): void {
@@ -211,20 +214,81 @@ class Pep723NotebookWidget extends Widget {
 
   private _createTreeDisplay(container: HTMLElement): void {
     const treeTitle = document.createElement('h3');
-    treeTitle.textContent = 'Dependency Tree';
+    treeTitle.className = 'tree-title';
+    this._updateTreeTitle(treeTitle);
     container.appendChild(treeTitle);
 
     const treeContent = document.createElement('div');
     treeContent.className = 'tree-content';
-    treeContent.innerHTML =
-      '<p>Add a dependency to see the dependency tree.</p>';
+    treeContent.innerHTML = '<p>Loading dependency tree...</p>';
     container.appendChild(treeContent);
+  }
+
+  private _updateTreeTitle(titleElement?: HTMLElement): void {
+    const title =
+      titleElement || (this.node.querySelector('.tree-title') as HTMLElement);
+    if (!title) {
+      return;
+    }
+
+    const lockfileContent = this._context.model.getMetadata('uv.lock') as
+      | string
+      | undefined;
+    const isLocked = lockfileContent !== undefined;
+
+    title.textContent = isLocked ? '🔒 Dependency Tree' : '🔓 Dependency Tree';
+
+    // Update tree content styling based on lock status
+    const treeContent = this.node.querySelector('.tree-content') as HTMLElement;
+    if (treeContent) {
+      if (isLocked) {
+        treeContent.classList.remove('unlocked');
+      } else {
+        treeContent.classList.add('unlocked');
+      }
+    }
   }
 
   private _updateTreeDisplay(treeOutput?: string): void {
     const treeContent = this.node.querySelector('.tree-content') as HTMLElement;
     if (treeContent && treeOutput) {
       treeContent.innerHTML = `<pre>${treeOutput}</pre>`;
+    }
+    // Update title to reflect current lock status
+    this._updateTreeTitle();
+  }
+
+  private async _loadInitialTree(): Promise<void> {
+    try {
+      // Get current script metadata from first cell
+      const firstCell = this._context.model.cells.get(0);
+      const scriptMetadata = firstCell.sharedModel.getSource();
+
+      // Check for existing lockfile in notebook metadata
+      const lockfileContent = this._context.model.getMetadata('uv.lock') as
+        | string
+        | undefined;
+
+      // Call get-tree API
+      const response = await requestAPI<any>('get-tree', {
+        method: 'POST',
+        body: JSON.stringify({
+          script_metadata: scriptMetadata,
+          lockfile_content: lockfileContent || null
+        })
+      });
+
+      // Update tree display
+      this._updateTreeDisplay(response.tree_output);
+    } catch (error) {
+      console.error('Error loading initial tree:', error);
+      const treeContent = this.node.querySelector(
+        '.tree-content'
+      ) as HTMLElement;
+      if (treeContent) {
+        treeContent.innerHTML = '<p>Failed to load dependency tree.</p>';
+      }
+      this._updateTreeTitle();
     }
   }
 
