@@ -3,6 +3,7 @@ import os
 import tempfile
 import subprocess
 import shutil
+import traceback
 
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
@@ -24,6 +25,7 @@ class GetTreeHandler(APIHandler):
     @tornado.web.authenticated
     def post(self):
         """Get dependency tree for PEP 723 script metadata using uv"""
+        self.log.info("GetTreeHandler: POST request received")
         try:
             # Parse request body
             data = json.loads(self.request.body)
@@ -110,6 +112,9 @@ class GetTreeHandler(APIHandler):
                 "error": "Invalid JSON in request body"
             }))
         except Exception as e:
+            # Log the full traceback for debugging
+            self.log.error(f"GetTreeHandler error: {str(e)}")
+            self.log.error(f"Traceback: {traceback.format_exc()}")
             self.set_status(500)
             self.finish(json.dumps({
                 "error": f"Internal server error: {str(e)}"
@@ -120,6 +125,7 @@ class AddDependencyHandler(APIHandler):
     @tornado.web.authenticated
     def post(self):
         """Add a dependency to PEP 723 script metadata using uv"""
+        self.log.info("AddDependencyHandler: POST request received")
         try:
             # Parse request body
             data = json.loads(self.request.body)
@@ -234,6 +240,9 @@ class AddDependencyHandler(APIHandler):
                 "error": "Invalid JSON in request body"
             }))
         except Exception as e:
+            # Log the full traceback for debugging
+            self.log.error(f"AddDependencyHandler error: {str(e)}")
+            self.log.error(f"Traceback: {traceback.format_exc()}")
             self.set_status(500)
             self.finish(json.dumps({
                 "error": f"Internal server error: {str(e)}"
@@ -266,4 +275,18 @@ def setup_handlers(web_app):
         (add_dependency_pattern, AddDependencyHandler),
         (get_tree_pattern, GetTreeHandler)
     ]
+    
+    # Log handler registration for debugging
+    print(f"pep723widget: Registering handlers:")
+    print(f"  - {route_pattern} -> RouteHandler")
+    print(f"  - {add_dependency_pattern} -> AddDependencyHandler") 
+    print(f"  - {get_tree_pattern} -> GetTreeHandler")
+    
+    # Test uv availability
+    try:
+        uv_bin = uv.find_uv_bin()
+        print(f"pep723widget: uv found at {uv_bin}")
+    except Exception as e:
+        print(f"pep723widget: WARNING - uv not available: {e}")
+    
     web_app.add_handlers(host_pattern, handlers)
