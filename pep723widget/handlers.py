@@ -276,17 +276,29 @@ def setup_handlers(web_app):
         (get_tree_pattern, GetTreeHandler)
     ]
     
-    # Log handler registration for debugging
-    print(f"pep723widget: Registering handlers:")
-    print(f"  - {route_pattern} -> RouteHandler")
-    print(f"  - {add_dependency_pattern} -> AddDependencyHandler") 
-    print(f"  - {get_tree_pattern} -> GetTreeHandler")
-    
-    # Test uv availability
-    try:
-        uv_bin = uv.find_uv_bin()
-        print(f"pep723widget: uv found at {uv_bin}")
-    except Exception as e:
-        print(f"pep723widget: WARNING - uv not available: {e}")
-    
     web_app.add_handlers(host_pattern, handlers)
+    
+    # Log handler registration for debugging (using web_app settings to get logger)
+    try:
+        # Try to get the server app logger if available
+        if hasattr(web_app, 'settings') and 'log' in web_app.settings:
+            logger = web_app.settings['log'] 
+        else:
+            import logging
+            logger = logging.getLogger('pep723widget')
+            
+        logger.info(f"pep723widget: Registered handlers:")
+        logger.info(f"  - {route_pattern} -> RouteHandler")
+        logger.info(f"  - {add_dependency_pattern} -> AddDependencyHandler") 
+        logger.info(f"  - {get_tree_pattern} -> GetTreeHandler")
+        
+        # Test uv availability
+        try:
+            uv_bin = uv.find_uv_bin()
+            logger.info(f"pep723widget: uv found at {uv_bin}")
+        except Exception as e:
+            logger.warning(f"pep723widget: uv not available: {e}")
+            
+    except Exception as e:
+        # Fallback to print if logging fails
+        print(f"pep723widget: Handlers registered (logging failed: {e})")
