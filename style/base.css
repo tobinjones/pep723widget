@@ -122,3 +122,23 @@ PEP 723 Widget Styles
   color: var(--jp-info-color1);
   border: 1px solid var(--jp-info-color2);
 }
+
+.tree-section {
+  margin: 16px 0;
+}
+
+.tree-content {
+  background: var(--jp-layout-color1);
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 4px;
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: var(--jp-code-font-family);
+}
+
+.tree-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
