@@ -5,6 +5,9 @@ PEP 723 Widget Styles
 .pep723-container {
   padding: 16px;
   font-family: var(--jp-ui-font-family);
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .pep723-error {
