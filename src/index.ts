@@ -80,14 +80,6 @@ class Pep723NotebookWidget extends Widget {
   }
 
   private _createMainInterface(container: HTMLElement): void {
-    const notebookInfo = document.createElement('div');
-    notebookInfo.className = 'notebook-info';
-    notebookInfo.innerHTML = `
-      <p><strong>Notebook:</strong> ${this._context.path}</p>
-      <p><strong>Status:</strong> Ready for dependency management</p>
-    `;
-    container.appendChild(notebookInfo);
-
     // Current metadata display
     const metadataSection = document.createElement('div');
     metadataSection.className = 'metadata-section';
@@ -120,6 +112,11 @@ class Pep723NotebookWidget extends Widget {
     input.id = 'dependency-input';
     input.placeholder = 'e.g., requests, pandas>=2.0.0, numpy[dev]';
     input.className = 'dependency-input';
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        this._addDependency();
+      }
+    });
 
     const button = document.createElement('button');
     button.textContent = 'Add Dependency';
@@ -257,7 +254,9 @@ class Pep723NotebookWidget extends Widget {
       const scriptMetadata = firstCell.sharedModel.getSource();
 
       // Check for existing lockfile in notebook metadata
-      const lockfileContent = this._context.model.getMetadata('uv.lock') as string | undefined;
+      const lockfileContent = this._context.model.getMetadata('uv.lock') as
+        | string
+        | undefined;
 
       // Call backend API
       const response = await requestAPI<any>('add-dependency', {
