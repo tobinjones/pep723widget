@@ -51,7 +51,11 @@ class Pep723NotebookWidget extends Widget {
     const validationResult = this._validateNotebook();
 
     if (!validationResult.valid) {
-      this._createErrorPage(container, validationResult.error!);
+      if (validationResult.needsInitialization) {
+        this._createInitializationPage(container);
+      } else {
+        this._createErrorPage(container, validationResult.error!);
+      }
       this.node.appendChild(container);
       return;
     }
@@ -59,6 +63,37 @@ class Pep723NotebookWidget extends Widget {
     // Show the main interface
     this._createMainInterface(container);
     this.node.appendChild(container);
+  }
+
+  private _createInitializationPage(container: HTMLElement): void {
+    const initDiv = document.createElement('div');
+    initDiv.className = 'pep723-init';
+    initDiv.innerHTML = `
+      <div class="init-icon">📋</div>
+      <h3>Script metadata not found</h3>
+      <p>This notebook doesn't have PEP 723 script metadata configured. Initialize it to start managing dependencies.</p>
+      <div class="init-help">
+        <h4>What will happen:</h4>
+        <ul>
+          <li>A PEP 723 metadata cell will be added to the beginning of your notebook</li>
+          <li>The metadata will include basic Python requirements</li>
+          <li>A lockfile will be generated and stored in the notebook metadata</li>
+        </ul>
+      </div>
+    `;
+
+    const initButton = document.createElement('button');
+    initButton.textContent = 'Add metadata cell';
+    initButton.className = 'init-btn';
+    initButton.onclick = () => this._initializePep723();
+
+    const statusDiv = document.createElement('div');
+    statusDiv.id = 'init-status-message';
+    statusDiv.className = 'status-message';
+
+    initDiv.appendChild(initButton);
+    initDiv.appendChild(statusDiv);
+    container.appendChild(initDiv);
   }
 
   private _createErrorPage(container: HTMLElement, error: string): void {
@@ -137,11 +172,45 @@ class Pep723NotebookWidget extends Widget {
     container.appendChild(form);
   }
 
-  private _validateNotebook(): { valid: boolean; error?: string } {
+  private _validateNotebook(): {
+    valid: boolean;
+    error?: string;
+    needsInitialization?: boolean;
+  } {
     const cells = this._context.model.cells;
 
     if (cells.length === 0) {
       return { valid: false, error: 'Notebook has no cells.' };
+    }
+
+    // Check if ANY cell has PEP 723 metadata
+    const startMarkerRegex = /^# \/\/\/ [a-zA-Z0-9-]+$/m;
+    let hasMetadataAnywhere = false;
+    let metadataLocation = -1;
+
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells.get(i);
+      if (cell.type === 'code') {
+        const cellSource = cell.sharedModel.getSource();
+        if (startMarkerRegex.test(cellSource)) {
+          hasMetadataAnywhere = true;
+          metadataLocation = i;
+          break;
+        }
+      }
+    }
+
+    // If no metadata found anywhere, suggest initialization
+    if (!hasMetadataAnywhere) {
+      return { valid: false, needsInitialization: true };
+    }
+
+    // If metadata is not in first cell, show error
+    if (metadataLocation !== 0) {
+      return {
+        valid: false,
+        error: `PEP 723 metadata found in cell ${metadataLocation + 1}. Metadata must only be in the first cell.`
+      };
     }
 
     const firstCell = cells.get(0);
@@ -183,8 +252,7 @@ class Pep723NotebookWidget extends Widget {
       }
     }
 
-    // Check that no other cells contain PEP 723 metadata
-    const startMarkerRegex = /^# \/\/\/ [a-zA-Z0-9-]+$/m;
+    // Check that no other cells contain PEP 723 metadata (already covered above)
     for (let i = 1; i < cells.length; i++) {
       const cell = cells.get(i);
       if (cell.type === 'code') {
@@ -259,8 +327,12 @@ class Pep723NotebookWidget extends Widget {
 
   private _updateTreeDisplay(treeOutput?: string): void {
     const treeContent = this.node.querySelector('.tree-content') as HTMLElement;
-    if (treeContent && treeOutput) {
-      treeContent.innerHTML = `<pre>${treeOutput}</pre>`;
+    if (treeContent && treeOutput !== undefined) {
+      if (treeOutput.trim() === '') {
+        treeContent.innerHTML = '<p>No dependencies</p>';
+      } else {
+        treeContent.innerHTML = `<pre>${treeOutput}</pre>`;
+      }
     }
     // Update title to reflect current lock status
     this._updateTreeTitle();
@@ -408,6 +480,64 @@ class Pep723NotebookWidget extends Widget {
     } finally {
       // Re-enable form
       input.disabled = false;
+      button.disabled = false;
+    }
+  }
+
+  private async _initializePep723(): Promise<void> {
+    const button = this.node.querySelector('.init-btn') as HTMLButtonElement;
+    const status = this.node.querySelector(
+      '#init-status-message'
+    ) as HTMLElement;
+
+    // Disable button during request
+    button.disabled = true;
+    this._showStatus(status, 'Initializing PEP 723 metadata...', 'loading');
+
+    try {
+      // Call backend API to initialize metadata
+      const response = await requestAPI<any>('initialize', {
+        method: 'POST',
+        body: JSON.stringify({})
+      });
+
+      // Insert a new cell at the beginning with the metadata
+      const notebookModel = this._context.model;
+
+      // Create new code cell with the metadata using the shared model
+      notebookModel.sharedModel.insertCell(0, {
+        cell_type: 'code',
+        source: response.initial_metadata,
+        metadata: {
+          jupyter: {
+            source_hidden: true
+          }
+        }
+      });
+
+      // Store lockfile in notebook metadata (notebooks should be locked by default)
+      if (response.lockfile_content) {
+        this._context.model.setMetadata('uv.lock', response.lockfile_content);
+      }
+
+      this._showStatus(
+        status,
+        'PEP 723 metadata initialized successfully!',
+        'success'
+      );
+
+      // Refresh the UI after a short delay to show the success message
+      setTimeout(() => {
+        this.node.innerHTML = '';
+        this._createContent();
+      }, 1500);
+    } catch (error) {
+      console.error('Error initializing PEP 723:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to initialize metadata';
+      this._showStatus(status, `Error: ${errorMessage}`, 'error');
       button.disabled = false;
     }
   }

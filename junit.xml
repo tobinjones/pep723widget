@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="1" failures="0" errors="0" time="2.166">
+  <testsuite name="pep723widget" errors="0" failures="0" skipped="0" timestamp="2025-08-19T02:01:42" time="1.33" tests="1">
+    <testcase classname="pep723widget should be tested" name="pep723widget should be tested" time="0.001">
+    </testcase>
+  </testsuite>
+</testsuites>
