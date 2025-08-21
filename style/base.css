@@ -33,6 +33,51 @@ PEP 723 Widget Styles
   font-size: 0.9em;
 }
 
+.pep723-init {
+  background: var(--jp-info-color3);
+  border: 1px solid var(--jp-info-color2);
+  border-radius: 4px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.pep723-init .init-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.pep723-init h3 {
+  color: var(--jp-info-color1);
+  margin: 0 0 8px;
+}
+
+.pep723-init .init-help {
+  margin: 16px 0;
+  font-size: 0.9em;
+}
+
+.init-btn {
+  padding: 12px 24px;
+  background: var(--jp-brand-color1);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  margin: 16px 0 8px;
+}
+
+.init-btn:disabled {
+  background: var(--jp-layout-color3);
+  cursor: not-allowed;
+}
+
+.init-btn:hover:not(:disabled) {
+  background: var(--jp-brand-color0);
+}
+
 .notebook-info {
   background: var(--jp-layout-color2);
   padding: 12px;
